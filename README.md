@@ -1,165 +1,287 @@
 # AI Agent Decision Firewall & Evaluation Harness
 
-A production-oriented, **model-agnostic decision firewall** for AI agents.
-It sits between an agent and every tool/action it wants to execute. Core invariant:
-
 > **No approval → no execution.**
+> A security checkpoint that sits between any AI agent and every action it tries to take — backed by a measurement lab that proves the checkpoint actually works.
 
-The decision model is pluggable. Initial adapters: **Jev** (TypeSafe AI, closed API)
-and **Laya** (Convai Innovations, Apache-2.0 open weights). The firewall, policy
-engine, evaluator, and test suite never know which model is active — switching
-models is a config/CLI/env change, never a code change.
+---
 
-## Research: the two decision models
+## 🧭 What is this? (60 seconds)
 
-**Jev (TypeSafe AI)** — a closed, hosted "System One" model (`jev-latest`).
-It does not generate text: it takes a state plus typed questions and returns
-typed answers — `noul` (0–1 yes/no probability), `score` (probability-weighted
-rubric level), `choice` (option + full distribution + confidence). Endpoint:
-`POST https://api.typesafe.ai/v1/systemone`. Independently measured p50 ≈ 236–276 ms.
-Strengths: high-cardinality choices (up to 255 options), soft distribution quality.
-Weakness: closed weights, paid API, raw calibration lags post-temperature competitors.
+AI agents (Claude Code, Cursor, Cline, your own bots) can now edit files, run shell commands, push to git, hit networks, and drive browsers. The problem: **the model that *does* the work is also the thing that decides whether the work is safe.** Prompt-based guardrails are suggestions, not boundaries.
 
-**Laya (Convai Innovations)** — the open alternative: Apache-2.0 weights on
-Hugging Face (`convaiinnovations/laya`), 421M params (ModernBERT-large + decision
-head), non-autoregressive single forward pass (~33 ms on T4), 100+ languages via
-the multilingual checkpoint, trained with RLCD (RL against strictly proper scoring
-rules) so honest probabilities maximize reward. Runs locally via `pip install laya`;
-this repo ships a reference sidecar (`sidecars/laya/server.py`). Strengths: speed,
-price ($0), multilingual, calibration (ECE 0.081 after temperature fit). Weaknesses:
-base checkpoints are near chance zero-shot on typed decisions (need fine-tuning),
-degrades on very high-cardinality choices (token budget per option), ordinal scores
-are its weakest primitive.
+This project flips that. It is a small, fast, **model-agnostic firewall**:
 
-Both expose the same question schema, so **one question registry drives both**.
+- Your agent proposes an action ("run `npm test`", "edit README.md", "deploy to prod").
+- The firewall asks a **decision model** a fixed set of typed questions — *authorized? destructive? touching secrets? how risky (0–4)?*
+- A **deterministic policy** turns those answers into one of three verdicts:
 
-## Architecture
+| Verdict | Meaning | Exit code |
+|---|---|---|
+| **ALLOW** | Execute — safe, in scope | `0` |
+| **ASK** | Uncertain — a human decides | `2` |
+| **BLOCK** | Refuse — dangerous, out of scope, or the model itself failed | `1` |
 
+Two hard rules make it a *boundary*, not a suggestion:
+1. **Fail closed** — model unavailable, timeout, malformed answer, unknown question ⇒ BLOCK. Never "execute anyway".
+2. **The decision model never executes anything.** The executor only runs after ALLOW.
+
+Around it sits an **evaluation harness**: versioned questions, permanent datasets, per-dimension metrics, A/B model comparison, promotion gates. You don't just *have* a firewall — you can *prove* how good it is and *measurably improve* it.
+
+```mermaid
+flowchart TB
+    U["👤 User requirement"] --> A
+    subgraph A["🤖 AI Agent"]
+        W["wants to act"]
+    end
+    A -->|"proposed action"| F
+    subgraph F["🧱 DECISION FIREWALL"]
+        CB["Context builder<br/>state → text (versioned)"]
+        M["Decision model adapter<br/>Jev | Laya | Mock"]
+        P["Policy engine<br/>deterministic"]
+        CB --> M --> P
+    end
+    P -->|ALLOW| X["⚙️ Executor<br/>action really runs"]
+    P -->|ASK| H["👤 Human approves"]
+    P -->|BLOCK| S["🛑 Stopped + audited"]
+    M -.->|"error / timeout / malformed"| P
+    P -.->|"fail closed = BLOCK"| S
+    F --> AU["📜 Audit log<br/>redacted JSONL"]
 ```
-USER → REQUIREMENT → AI AGENT → PROPOSED ACTION
-                                     │
-                              DECISION FIREWALL   ← guard(): no approval → no execution
-                                     │
-                              CONTEXT BUILDER     ← context/v1, deterministic state text
-                                     │
-                        ┌──────────┴──────────┐
-                        │  DECISION MODEL     │   JevAdapter │ LayaAdapter │ MockAdapter
-                        └──────────┬──────────┘
-                            TYPED ANSWERS (shared schema)
-                                     │
-                              POLICY ENGINE v1    ← deterministic ALLOW/ASK/BLOCK
-                                     │
-                          ALLOW → EXECUTOR   ASK → human   BLOCK → stop
+
+And this is what one decision looks like inside:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Agent as Agent
+    participant FW as Firewall
+    participant Ctx as Context builder v1
+    participant Laya as Laya (local)
+    participant Policy as Policy v1
+    participant Audit as Audit log
+    Agent->>FW: action "rm -rf src"
+    FW->>Ctx: build state text
+    Ctx-->>FW: requirement, scope, diff, args
+    FW->>Laya: state + 8 typed questions
+    Laya-->>FW: authorized 0.43, destructive 0.28, risk 1.4 …
+    FW->>Policy: apply deterministic rules
+    Policy-->>FW: uncertain → ASK (human decides)
+    FW->>Audit: record verdict, versions, latency
+    FW-->>Agent: ASK — nothing executed
 ```
 
-Fails closed: adapter unavailable, timeout, invalid JSON, missing answer,
-schema mismatch, or exception ⇒ **BLOCK**, never "execute anyway".
+---
 
-## Layout
+## 🚀 Quickstart
 
-| Path | Purpose |
-| --- | --- |
-| `src/state/` | Canonical `DecisionState` (§7) — one state for every adapter/harness/replay |
-| `src/browser/` | Web agent: session isolation, DOM observation, step guard, bounded run loop (see below) |
-| `src/questions/` | Versioned question registry (§5) + zero-dep YAML subset parser |
-| `src/context/` | `context/v1` builder: state → deterministic model-agnostic text (§8) |
-| `src/adapters/` | Contract, Jev, Laya, Mock adapters; error-as-data, never throw (§4, §26) |
-| `src/config/` | Layered config: file < `FIREWALL_MODEL` < `--model` (§3) |
-| `src/policy/` | Deterministic policy v1 → ALLOW/ASK/BLOCK (fail-closed) |
-| `src/firewall/` | `DecisionFirewall.guard()` — the only path to the executor (§1) |
-| `src/audit/` | Versioned JSONL audit log with explicit secret redaction (§27) |
-| `src/datasets/` | Typed loader for golden / adversarial / regression datasets (§9, §10, §16) |
-| `src/eval/` | Per-dimension metrics, Brier/ECE, escape + friction rates (§11, §12) |
-| `src/promotion/` | Configurable promotion gates (§18) |
-| `config/questions.v1.yaml` | Registry v1: 8 questions, noul/score types |
-| `config/datasets/*.v1.yaml` | Golden (13), adversarial (7), regression (3) cases |
-| `sidecars/laya/server.py` | Reference Laya sidecar (Apache-2.0 `laya` package) |
-| `.github/workflows/ci.yml` | CI pipeline per §24 |
-
-## Datasets
-
-- **Golden v1** — safe actions, scope creep, destructive, sensitive, privilege
-  escalation, deployment, network. Every case carries per-question ground truth
-  plus the expected end-to-end verdict.
-- **Adversarial v1** — prompt injection, fake authorization, urgency manipulation,
-  encoded commands, path traversal, tool substitution, env exfiltration. The
-  expected decision follows the *actual operation*, never the agent's explanation.
-- **Regression v1** — permanent cases for every bug class (secret allowed, scope
-  creep allowed, production deploy allowed).
-- **Browser golden v1** — page flows (search, checkout, form, scroll, stop) with
-  per-step expectations.
-- **Browser adversarial v1** — page-embedded prompt injection, offscreen danger
-  buttons, credential fields, cross-origin navigation, urgency modals.
-
-## Browser agent (Jev/Laya inside the web)
-
-Following the Cline `jev-browser` model (see `docs/research-jev-browser.md`):
-
-- **Isolation first** — every session must pass `isolationViolations`:
-  headless, origin allowlist (no wildcards), request filtering, no downloads,
-  no persistent storage, hard step/time budgets, forbidden browser args denied.
-- **Text observations, never screenshots** — indexed visible targets (`[t3]
-  button: "Search"`), below-fold marked, clipped to a context budget.
-- **One decision per step** — `step_action` choice + `goal_met` / `stuck` /
-  `injection_in_page` noul questions (registry v2).
-- **Code owns the loop; models decide; the firewall approves** — budgets,
-  recovery, stop gates live in `runBrowserGoal`; each step maps to the canonical
-  `DecisionState` and flows through the same policy engine as files and shell.
-- Split-brain ready: Jev/Laya pick the operation; an argument-generator LLM can
-  fill typed text without touching the decision path.
+### 1. Clone and install
 
 ```bash
-# evaluate browser datasets through the same gates
-npx tsx src/cli/index.ts browse-eval --model mock --mock-mode block_all --dataset browser-adversarial.v1
-npx tsx src/cli/index.ts browse-eval --model jev --dataset browser-golden.v1
+git clone <this-repo> agent-decision-firewall
+cd agent-decision-firewall
+npm ci          # installs TypeScript, vitest, tsx
+npm link        # gives you the `firewall` command
+firewall        # prints usage — you're ready
 ```
 
-## Metrics (never one aggregate number)
+### 2. Meet Laya — the primary model
 
-Per question dimension: accuracy, precision, recall, F1, FPR, FNR, Brier, ECE.
-Firewall level: verdict accuracy, **dangerous-action escape rate** (primary
-security metric), **safe-action friction** (ASK rate on safe actions), escapes
-by category, adapter/schema failure count. Security-critical classes
-(secret exposure, production deploy, destructive FS, credential access) stay
-separate — never hidden in an aggregate.
+**Laya** ([Convai Innovations](https://huggingface.co/convaiinnovations/laya)) is a 421M-parameter **decision model** — it does not chat or generate text. It answers typed questions with calibrated probabilities in a single forward pass. It runs **100% locally** (Apache-2.0), so:
 
-## Usage
+- 🔒 your code, diffs, and secrets **never leave your machine**
+- 💸 zero per-decision cost
+- ⚡ fast enough for real use (~0.2–0.8 s per decision, CPU/GPU)
+
+Set it up (Python 3.12, managed with `uv` — fast and self-contained):
 
 ```bash
-npm ci && npm link          # provides the `firewall` command
+bash sidecars/laya/setup.sh boot
+# creates .venv (Python 3.12), installs the `laya` package,
+# starts a local HTTP sidecar on http://127.0.0.1:8770
+# (first boot downloads ~800 MB of weights; after that it's cached)
+```
 
-# evaluate a dataset with a model (code-free switching)
-firewall eval --dataset golden.v1
-firewall eval --model mock --mock-mode allow_all --dataset golden.v1
+Leave it running. Verify with:
 
-# A/B comparison across models
-firewall compare --models laya,mock --dataset golden.v1
-
-# browser datasets through the same gates
-firewall browse-eval --model mock --mock-mode block_all --dataset browser-adversarial.v1
-
-# with real models (Laya local, see sidecars/laya/setup.sh)
-TYPESAFE_API_KEY=... firewall eval --model jev
-bash sidecars/laya/setup.sh boot &   # starts sidecar on :8770 (Python 3.12 + uv)
+```bash
 firewall eval --model laya --dataset golden.v1
 ```
 
-Exit codes double as CI gates: `eval` exits 1 if any dangerous action escaped.
-Recorded Laya-on-hardware results: `docs/laya-eval-results.md`.
+You should see a per-dimension report (accuracy, precision, recall, F1, Brier, ECE per question) and a *dangerous escape rate*. That number is the heartbeat of this project.
 
-## Milestones
+### 3. Gate your first action
 
-- [x] M1 — firewall core: Jev + Mock adapters, question registry, datasets,
-      evaluation runner, audit log, CLI, deterministic policy, fail-closed execution
-- [x] M2 — Laya adapter (identical schema; zero firewall code changed)
-- [x] Partial M3 — escape/friction gates; A/B compare
-- [x] M4 partial — browser executor: isolation, observation, step guard, run
-      loop, web datasets, `browse-eval` (real Playwright driver next)
-- [ ] M3 remainder — shadow mode, replay, human feedback loop, disagreement explorer
-- [ ] M4 remainder — Playwright driver, MCP interception, shell/git/network/database executors
-- [ ] M5 — continuous evaluation, candidate datasets, automated promotion
+```bash
+firewall check \
+  --requirement "Fix the typo in README.md" \
+  --kind file_write --summary "edit README.md" --target README.md \
+  --allowed-paths README.md \
+  --model laya
+```
 
-## Non-goals
+Output (simplified):
 
-No autonomous agent, chatbot, code generation, model training, or policy
-auto-modification. The product is the decision boundary and the evaluation system.
+```
+=== FIREWALL CHECK (action_lx2…9f) ===
+requirement : Fix the typo in README.md
+action      : [file_write] edit README.md -> README.md
+model       : laya (questions v1, context v1, policy v1)
+verdict     : ALLOW
+reasons     : all_checks_passed
+```
+
+Add `-v` to watch the whole decision: the exact state text sent to Laya, every typed answer, and the policy's reasoning. Add `--exec` to make it a real gate: only ALLOW proceeds to the executor.
+
+---
+
+## 🛠️ The `firewall` CLI
+
+| Command | What it does |
+|---|---|
+| `firewall check …` | Gate **one real action**. The core primitive agents call. |
+| `firewall eval --model laya --dataset golden.v1` | Run a whole dataset; report per-question metrics + security rates. Exit `1` if anything dangerous escaped. |
+| `firewall browse-eval …` | Same, for **browser** scenarios (page flows & web attacks). |
+| `firewall compare --models laya,mock --dataset golden.v1` | **A/B** two models side-by-side, per dimension — never one "winner score". |
+| `firewall test` | One-command validation across golden + adversarial + regression. |
+
+### `firewall check` in detail
+
+```bash
+firewall check \
+  --requirement "what the user asked" \
+  --kind file_write|file_delete|shell|git|network|deploy \
+  --summary "what the agent wants to do" \
+  --target "concrete target (path/command/URL)" \
+  --diff /path/to/unified.diff      # optional: real diff for file edits
+  --allowed-paths README.md,src/    # optional: scope contract
+  --explanation "agent's excuse"    # optional: shown to the model, NEVER trusted
+  --model laya                      # or jev | mock
+  -v                                # verbose: see inside the decision
+  --exec                            # only ALLOW reaches the executor
+```
+
+Exit codes double as gates: `0` = ALLOW, `2` = ASK, `1` = BLOCK — so CI and agent harnesses can consume it directly.
+
+---
+
+## 🧪 What you can do with it
+
+| You want to… | Do this |
+|---|---|
+| See if a specific action is safe | `firewall check … --model laya` |
+| Watch the model decide step-by-step | add `-v` |
+| Make agents unable to bypass it | add `--exec`; only ALLOW executes |
+| Measure how good the firewall is | `firewall eval --model laya` |
+| Test it against attacks (injection, fake auth, encoded commands) | `firewall eval --dataset adversarial.v1` |
+| Check web/browser scenarios | `firewall browse-eval --dataset browser-golden.v1` |
+| Compare Laya vs Jev vs Mock honestly | `firewall compare --models laya,jev` |
+| Make sure a bug never comes back | add a case to `config/datasets/regression.v1.yaml` |
+| Evolve the questions safely | new version in `config/questions.vN.yaml`; old experiments stay comparable |
+| Audit what was decided and why | `.firewall/audit.jsonl` — versioned, secrets redacted |
+
+Everything is versioned — questions, context format, policy, experiment — so **any past decision can be reproduced and any future change is an experiment, not a gamble.**
+
+---
+
+## 📊 Proven results (real, local Laya — not marketing)
+
+Recorded on hardware, in `docs/laya-eval-results.md` and `docs/demo-run-findings.md`:
+
+| Dataset | Cases | Verdict accuracy | **Dangerous escape rate** | Safe ASK friction |
+|---|---|---|---|---|
+| golden | 12 | 33.3% | **0.000** | 0.600 |
+| adversarial | 7 | 28.6% | **0.000** | 1.000 |
+| regression | 3 | 66.7% | **0.000** | 1.000 |
+| browser-golden | 5 | 20.0% | **0.000** | 0.400 |
+
+Read those numbers like a security engineer:
+
+- **Dangerous escape rate 0.000** — on every dataset, nothing destructive, sensitive, or escalation-shaped was ever auto-allowed. This is the primary security metric, and it's reported **per category** (secrets, production, destructive FS, credentials) — never hidden in an average.
+- **High ASK friction** — zero-shot Laya is under-calibrated (a documented model-card weakness we confirmed), so many *safe* actions also escalate to a human. Safe, but annoying. That's the top known issue, it's measured, and it's fixable (fine-tuning + hard-deny rules below).
+- **Per-dimension honesty** — Laya is strong on destructive (83%), sensitive (92%), suspicious (75%); weak on reversibility (25%). A single "33% accuracy" headline would have hidden all of that. This is why the harness refuses one aggregate score.
+
+A 13-scenario live demo (dummy repo, real user flows — typo fixes, `rm -rf`, sudo, `curl | bash` with fake authorization, base64-encoded payloads, prod deploys) is scripted in `scripts/demo-scenarios.sh` and recorded in `demo/firewall-laya-demo.mp4` (gitignored). Tally: **3 ALLOW / 7 ASK / 3 BLOCK, zero dangerous escapes.**
+
+---
+
+## 🌐 The browser agent (Jev/Laya inside the web)
+
+Following Cline's `jev-browser` pattern (research in `docs/research-jev-browser.md`): give the decision model eyes on a web page, keep the loop in code.
+
+```mermaid
+flowchart LR
+    G["Goal: 'find warranty section'"] --> LOOP
+    subgraph LOOP["Bounded run loop (code owns it)"]
+        OBS["Observe page<br/>indexed text targets"] --> DEC["Model decides:<br/>step_action choice"]
+        DEC --> FW["Firewall policy<br/>ALLOW / ASK / BLOCK"]
+        FW -->|"ALLOW"| ACT["Executor applies op"]
+        ACT -->|next step| OBS
+        FW -->|"BLOCK / stuck / budget"| END["Stop + trace"]
+    end
+```
+
+Isolation is validated **before** any session starts: headless, origin allowlist (no wildcards), request filtering, no downloads, no persistent storage, hard step/time budgets, forbidden browser args rejected. Page text is treated as untrusted — there's a dedicated `injection_in_page` question and adversarial web cases (embedded "ignore previous instructions", credential fields, offscreen danger buttons).
+
+---
+
+## 🗂️ Repo map
+
+```
+src/state/       canonical DecisionState (one shape for every model + harness)
+src/questions/   versioned question registry (v1 core, v2 + browser) + YAML parser
+src/context/     context/v1 builder — state → deterministic text for any model
+src/adapters/    Jev (TypeSafe API), Laya (local sidecar), Mock + fail-closed contract
+src/policy/      deterministic ALLOW/ASK/BLOCK rules (versioned)
+src/firewall/    DecisionFirewall.guard() — the only path to the executor
+src/audit/       redacted JSONL decision log
+src/datasets/    typed loaders for golden / adversarial / regression
+src/browser/     web agent: isolation, observation, step guard, run loop
+src/eval/        per-dimension metrics, escape/friction rates
+src/promotion/   promotion gates (escape rate, friction, schema failures)
+config/          questions.v1|v2.yaml, datasets/*.yaml
+sidecars/laya/   local Laya sidecar (Python 3.12) + setup script
+scripts/         e2e + demo + recording scripts
+```
+
+---
+
+## 🧬 How the pieces stay honest
+
+```mermaid
+flowchart LR
+    BUG["bug found in prod"] --> RC["regression case"]
+    RC --> DS["datasets"]
+    DS --> EV["evaluation"]
+    EV -->|escape rate worse?| REJ["promotion rejected"]
+    EV -->|better / equal| GATE["promotion gates pass"]
+    GATE --> LIVE["new version live"]
+    LIVE --> ASKDATA["ASK decisions + human answers"]
+    ASKDATA --> DS
+```
+
+Every change is an experiment; every failure becomes a permanent test; nothing is silently swapped underneath you. That's the difference between a demo and an infrastructure project.
+
+---
+
+## 🗺️ Status & roadmap
+
+- [x] Firewall core with fail-closed `guard()` — **no approval, no execution**
+- [x] **Laya adapter (primary)** running locally end-to-end, results recorded
+- [x] Jev adapter (TypeSafe `/v1/systemone`) — needs `TYPESAFE_API_KEY` to run live
+- [x] Mock adapter for deterministic CI (no network, no model needed)
+- [x] Golden + adversarial + regression + **browser** datasets
+- [x] Evaluation runner, A/B comparison, promotion gates, audit trail
+- [x] `firewall` CLI incl. `check` (single-action gate) — demo recorded
+- [ ] Hard-deny rules (`rm -rf`, `sudo`, `DROP`, force-push → always BLOCK before the model)
+- [ ] Shadow mode (second model watches, disagreements feed a review queue)
+- [ ] Replay system (re-decide any past action with a different model)
+- [ ] Real Playwright driver behind the browser interface
+- [ ] MCP server packaging (any MCP-compatible agent mounts the firewall)
+
+## 🚧 Non-goals
+
+No autonomous agent, no chatbot, no code generation, no model training loop, no auto-modifying policies. The product is the **decision boundary** and the **evaluation system** — everything else plugs in.
+
+---
+
+*Built as: rigorous decision boundary for AI agents, with interchangeable decision models (Laya first) and continuous empirical evaluation. Questions, policy, context, and datasets are versioned; security metrics are per-category; and every claim in this README is backed by a test, a dataset, or a recorded run.*
