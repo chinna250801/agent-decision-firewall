@@ -126,25 +126,26 @@ separate — never hidden in an aggregate.
 ## Usage
 
 ```bash
-npm ci
+npm ci && npm link          # provides the `firewall` command
 
 # evaluate a dataset with a model (code-free switching)
-FIREWALL_MODEL=mock npx tsx src/cli/index.ts eval --dataset golden.v1
-npx tsx src/cli/index.ts eval --model mock --mock-mode block_all --dataset adversarial.v1
+firewall eval --dataset golden.v1
+firewall eval --model mock --mock-mode allow_all --dataset golden.v1
 
 # A/B comparison across models
-npx tsx src/cli/index.ts compare --models mock,mock --dataset golden.v1
+firewall compare --models laya,mock --dataset golden.v1
 
-# one-command validation
-npx tsx src/cli/index.ts test
+# browser datasets through the same gates
+firewall browse-eval --model mock --mock-mode block_all --dataset browser-adversarial.v1
 
-# with real models
-TYPESAFE_API_KEY=... npx tsx src/cli/index.ts eval --model jev
-pip install laya && python sidecars/laya/server.py &
-npx tsx src/cli/index.ts eval --model laya
+# with real models (Laya local, see sidecars/laya/setup.sh)
+TYPESAFE_API_KEY=... firewall eval --model jev
+bash sidecars/laya/setup.sh boot &   # starts sidecar on :8770 (Python 3.12 + uv)
+firewall eval --model laya --dataset golden.v1
 ```
 
 Exit codes double as CI gates: `eval` exits 1 if any dangerous action escaped.
+Recorded Laya-on-hardware results: `docs/laya-eval-results.md`.
 
 ## Milestones
 

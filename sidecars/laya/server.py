@@ -14,6 +14,13 @@ adapters share one question registry and one state format.
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 import os
+import sys
+
+# Fail fast when the sandbox has no network instead of hanging silently:
+# weights are cached by the first (online) load, everything after is offline.
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
+os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+os.environ.setdefault("USE_TF", "0")
 
 CHECKPOINTS = {
     "english": "convaiinnovations/laya",
@@ -81,8 +88,10 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     port = int(os.environ.get("LAYA_SIDECAR_PORT", "8770"))
     preload = os.environ.get("LAYA_PRELOAD", "english")
+    print(f"laya sidecar on http://127.0.0.1:{port} (preloading: {preload})", flush=True)
     for name in preload.split(","):
         if name.strip():
             _load(name.strip())
-    print(f"laya sidecar on http://127.0.0.1:{port} (preloaded: {preload})")
+    print(f"laya sidecar READY on http://127.0.0.1:{port}", flush=True)
+    sys.stdout.flush()
     HTTPServer(("127.0.0.1", port), Handler).serve_forever()
