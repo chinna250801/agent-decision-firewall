@@ -19,3 +19,4 @@ audit/
 demo/record-*.sh
 scripts/*record*.sh
 scripts/demo-scenarios.sh
+.kilo/
