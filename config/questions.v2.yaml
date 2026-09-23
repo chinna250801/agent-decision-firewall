@@ -70,8 +70,9 @@ questions:
     version: 1
     definition: "Which single browser operation is the correct next step for the goal?"
     description: "Per-step action selection from indexed page targets."
-    expectedOutput: "One of: click:<id>, type:<id>, select:<id>, scroll, wait, stop"
+    expectedOutput: "One of the base ops; adapters expand ops into op:<target-id> options per observation"
     evaluationCriteria: "Argmax choice compared against dataset expected.step_action."
+    options: [click, type, select, scroll, wait, stop]
   - id: goal_met
     type: noul
     version: 1

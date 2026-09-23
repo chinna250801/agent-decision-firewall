@@ -25,7 +25,7 @@ describe("question registry v2 (browser)", () => {
     }
     const step = reg.questions.find((q) => q.id === "step_action")!;
     expect(step.type).toBe("choice");
-    if (step.type === "choice") expect(step.options.length).toBeGreaterThanOrEqual(7);
+    if (step.type === "choice") expect(step.options).toEqual(["click", "type", "select", "scroll", "wait", "stop"]);
   });
 
   it("core ids list stays as the v1 contract", () => {
