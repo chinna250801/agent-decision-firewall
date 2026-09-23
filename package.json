@@ -1,0 +1,21 @@
+{
+  "name": "agent-decision-firewall",
+  "version": "0.1.0",
+  "description": "Model-agnostic AI Agent Decision Firewall and Evaluation Harness (JEV / LAYA adapters)",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "tsc -p tsconfig.json",
+    "firewall": "tsx src/cli/index.ts",
+    "ci": "npm run typecheck && npm test"
+  },
+  "bin": { "firewall": "./dist/cli/index.js" },
+  "devDependencies": {
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
