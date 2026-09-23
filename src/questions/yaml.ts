@@ -69,11 +69,8 @@ function parseScalar(s: string): YamlValue {
   return unquote(v);
 }
 
-/** Parse `a: 1, b: "two: x"` inside inline braces. */
-function parseInlineMap(s: string): { [k: string]: YamlValue } {
-  const inner = s.slice(1, -1).trim();
-  const out: { [k: string]: YamlValue } = {};
-  if (inner === "") return out;
+/** Split on top-level commas, respecting quotes and bracket depth. */
+function splitTopLevel(inner: string): string[] {
   const parts: string[] = [];
   let depth = 0;
   let inQuote: string | null = null;
@@ -98,12 +95,27 @@ function parseInlineMap(s: string): { [k: string]: YamlValue } {
       cur += ch;
     }
   }
-  parts.push(cur);
-  for (const rawPart of parts) {
+  if (cur.trim() !== "" || parts.length > 0) parts.push(cur);
+  return parts;
+}
+
+function parseValue(s: string): YamlValue {
+  const v = s.trim();
+  if (v.startsWith("[") && v.endsWith("]")) return parseInlineArray(v);
+  if (v.startsWith("{") && v.endsWith("}")) return parseInlineMap(v);
+  return parseScalar(v);
+}
+
+/** Parse `a: 1, b: "two: x"` inside inline braces. */
+function parseInlineMap(s: string): { [k: string]: YamlValue } {
+  const inner = s.slice(1, -1).trim();
+  const out: { [k: string]: YamlValue } = {};
+  if (inner === "") return out;
+  for (const rawPart of splitTopLevel(inner)) {
     const part = rawPart.trimStart();
     const colon = findColon(part);
     if (colon > 0) {
-      out[part.slice(0, colon).trim()] = parseScalar(part.slice(colon + 1).trim());
+      out[part.slice(0, colon).trim()] = parseValue(part.slice(colon + 1));
     }
   }
   return out;
@@ -112,21 +124,7 @@ function parseInlineMap(s: string): { [k: string]: YamlValue } {
 function parseInlineArray(s: string): YamlValue[] {
   const inner = s.slice(1, -1).trim();
   if (inner === "") return [];
-  const items: string[] = [];
-  let depth = 0;
-  let cur = "";
-  for (const ch of inner) {
-    if (ch === "[" || ch === "{") depth++;
-    if (ch === "]" || ch === "}") depth--;
-    if (ch === "," && depth === 0) {
-      items.push(cur);
-      cur = "";
-    } else {
-      cur += ch;
-    }
-  }
-  items.push(cur);
-  return items.map((i) => parseScalar(i.trim()));
+  return splitTopLevel(inner).map((i) => parseValue(i));
 }
 
 function startsList(text: string): boolean {
