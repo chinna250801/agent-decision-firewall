@@ -86,6 +86,17 @@ Two laws make it a boundary instead of a suggestion:
 
 **Tally from the full 13-scenario run: 3 ALLOW · 7 ASK · 3 BLOCK · dangerous escapes 0.000.**
 
+<details>
+<summary><b>▶ Live web sessions — <code>firewall browse</code> on real Chrome (click to pause)</b></summary>
+
+<br>
+
+<img src="docs/assets/firewall-browser-demo.svg" alt="Firewall browser demo: live gated browsing with local Laya — benign goals, a typing goal, and a page-injected attack, every step firewall-approved" width="880"/>
+
+*What you're watching: `firewall browse` driving real, sandboxed Chrome against a local site — a benign navigation goal, a typing goal (split-brain: model picks the field, the quoted value is deterministic), and a **page-injected attack** the firewall refuses. Verdicts are honest: benign goals are currently over-blocked by zero-shot Laya (measured, documented, fix planned) — but nothing dangerous ever passes.*
+
+</details>
+
 ---
 
 ## 🚀 Get running (start to finish)
@@ -321,7 +332,7 @@ Latency: ~0.7 s/decision on Apple MPS (published: 33 ms on T4 GPU batched). Fine
 | **Private on-prem AI safety** | Laya is local — nothing leaves the network; audit trail included |
 | **Compliance evidence** | every decision logged with model+versions+reasons, secrets redacted |
 | **Model procurement** | run candidates through the same datasets, compare per-dimension before paying |
-| **Browser agent safety** | `browse-eval` + isolation-validated sessions + injection detection |
+| **Browser agent safety** | `firewall browse` live sessions + `browse-eval` + isolation-validated sandbox + injection detection |
 | **Continuous improvement loop** | bugs → regression cases → gates → promoted versions |
 
 **Effectiveness, in one paragraph:** the dangerous escape rate — the number that actually matters — is zero across every dataset, and every decision is audited, versioned, and reproducible. The current cost of that safety is friction (ASKs on ambiguous-safe actions), which is visible, measured, and shrinking via the evolution loop rather than hidden behind an aggregate score. Swap-in models via config mean the harness outlives any single vendor — Jev, Laya, and whatever comes next are interchangeable engines inside it.
