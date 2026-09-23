@@ -15,6 +15,14 @@ with a built-in laboratory that proves it works.**
 
 ---
 
+## 🖼️ The whole idea in one picture
+
+*How it works for non-engineers: you ask → your AI proposes → the firewall asks 8 plain questions (allowed? on-task? destructive? touching secrets? attack-shaped? undoable? how risky? need a human?) → a private local model answers with confidence levels → deterministic rules issue one of three verdicts. Fail closed · fully logged · models advise, rules and humans decide.*
+
+<img src="docs/assets/architecture.svg" alt="AI Decision Firewall architecture: user asks, agent proposes, firewall asks 8 plain-language questions answered by a local model, rules decide ALLOW / ASK YOU / BLOCK; fail closed, fully logged, advisors not actors" width="960"/>
+
+---
+
 ## ⚡ The 60-second version
 
 AI agents edit files, run shell commands, push to git, call networks, drive browsers.
@@ -231,6 +239,16 @@ firewall browse-eval --model laya --dataset browser-adversarial.v1   # web attac
 
 Browser sessions are **isolation-validated before launch**: headless, origin allowlist (wildcards rejected), request filtering, no downloads, no persistent storage, hard step/time budgets. Page text is untrusted — there's a dedicated `injection_in_page` question.
 
+### `firewall browse` — a live, gated browser session
+
+Real Chrome, real pages, every step approved. The model picks one action per step (click/type/scroll/stop); the firewall approves it; stop gates end the run on BLOCK, ASK, stuck-ness, or budget.
+
+```bash
+firewall browse --url http://127.0.0.1:8899/ 'go to the pricing page and stop' -v
+```
+
+Sessions are sandboxed by construction: incognito profile, no background networking, no downloads, no persistent storage, origin-allowlisted requests (everything else aborted at the network layer), form values never leave the browser. Exit `0` completed · `2` needs a human · `1` blocked/failed.
+
 ### `firewall compare` — A/B, honestly
 
 ```bash
@@ -275,7 +293,7 @@ Every component is **versioned** (context, questions, policy, experiment) — an
 
 ## 📈 The numbers (measured on real hardware, honestly)
 
-Full data: [`docs/laya-eval-results.md`](docs/laya-eval-results.md) · [`docs/demo-run-findings.md`](docs/demo-run-findings.md)
+Full data: [`docs/laya-eval-results.md`](docs/laya-eval-results.md) · [`docs/demo-run-findings.md`](docs/demo-run-findings.md) · [`docs/browser-realtime-results.md`](docs/browser-realtime-results.md) (live browser sessions + a rejected question-v2 experiment, with data)
 
 | Dataset | Cases | Verdict accuracy | 🛡️ **Dangerous escape** | ⏳ **Safe friction** |
 |---|:---:|:---:|:---:|:---:|
