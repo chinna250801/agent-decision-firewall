@@ -160,9 +160,14 @@ export function parseYaml(text: string): YamlValue {
         continue;
       }
       const colon = findColon(rest);
+      // Inline flow map/array items on the dash line: "- { a: 1, b: 2 }".
+      if (rest.startsWith("{") && rest.endsWith("}")) {
+        items.push(parseInlineMap(rest));
+        continue;
+      }
       // A quoted scalar may itself contain ": " (e.g. "none: no effect");
       // only an unquoted key: value pair opens an inline map item.
-      if (colon > 0 && !rest.startsWith('"') && !rest.startsWith("'")) {
+      if (colon > 0 && !rest.startsWith('"') && !rest.startsWith("'") && !rest.startsWith("{")) {
         // First key of a map item lives on the dash line; remaining keys align
         // two columns deeper ("- id: x" -> keys at indent + 2).
         const map: { [k: string]: YamlValue } = {};
