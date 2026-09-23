@@ -104,7 +104,7 @@ Two laws make it a boundary instead of a suggestion:
 ### 1 · Clone + firewall CLI
 
 ```bash
-git clone <this-repo> agent-decision-firewall
+git clone https://github.com/chinna250801/agent-decision-firewall.git
 cd agent-decision-firewall
 
 npm install        # install Node dependencies (TypeScript, vitest, tsx)
