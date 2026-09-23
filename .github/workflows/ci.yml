@@ -1,0 +1,39 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    env:
+      FIREWALL_MODEL: mock
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Type / schema tests
+        run: npm run typecheck
+
+      - name: Unit + adapter + policy tests
+        run: npx vitest run src/state src/questions src/adapters src/policy src/context src/config
+
+      - name: Golden dataset
+        run: npx tsx src/cli/index.ts eval --model mock --mock-mode block_all --dataset golden.v1
+
+      - name: Adversarial dataset
+        run: npx tsx src/cli/index.ts eval --model mock --mock-mode block_all --dataset adversarial.v1
+
+      - name: Regression suite
+        run: npx tsx src/cli/index.ts eval --model mock --mock-mode block_all --dataset regression.v1
+
+      - name: Full vitest gate
+        run: npm test
