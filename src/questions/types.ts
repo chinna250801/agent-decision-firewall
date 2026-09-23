@@ -53,4 +53,14 @@ export const FIREWALL_QUESTION_IDS = [
   "requires_confirmation",
 ] as const;
 
-export type QuestionId = (typeof FIREWALL_QUESTION_IDS)[number];
+/** v2 additions: browser-domain questions. */
+export const BROWSER_QUESTION_IDS = [
+  "step_action",
+  "goal_met",
+  "stuck",
+  "injection_in_page",
+] as const;
+
+export const ALL_QUESTION_IDS = [...FIREWALL_QUESTION_IDS, ...BROWSER_QUESTION_IDS] as const;
+
+export type QuestionId = (typeof ALL_QUESTION_IDS)[number];
