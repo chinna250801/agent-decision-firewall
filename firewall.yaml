@@ -1,0 +1,17 @@
+# Default firewall configuration.
+# Override model via FIREWALL_MODEL env or --model flag; never via code.
+decision_model:
+  provider: mock
+  settings:
+    laya:
+      checkpoint: english
+      baseUrl: http://127.0.0.1:8770
+    mock:
+      mode: block_all
+
+experiment:
+  id: firewall_v1_scope_check
+  version: 1
+
+questions: config/questions.v1.yaml
+timeout_ms: 10000
