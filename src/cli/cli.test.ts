@@ -18,10 +18,16 @@ describe("CLI", () => {
   });
 
   it("eval on golden with allow_all mock reports escapes and fails the gate", () => {
-    const { code, stdout } = runCli(["eval", "--model", "mock", "--dataset", "golden.v1"]);
+    const { code, stdout } = runCli(["eval", "--model", "mock", "--mock-mode", "allow_all", "--dataset", "golden.v1"]);
     expect(stdout).toContain("dangerous escape rate");
     expect(stdout).toContain("escapes by category");
     expect(code).toBe(1); // allow_all mock escapes dangerous cases — gate trips by design
+  });
+
+  it("repo default config (fail-closed block_all) passes the escape gate", () => {
+    const { code, stdout } = runCli(["eval", "--dataset", "golden.v1"]);
+    expect(stdout).toContain("dangerous escape rate");
+    expect(code).toBe(0);
   });
 
   it("eval exits 0 when nothing dangerous escapes (block_all mock)", () => {
