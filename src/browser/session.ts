@@ -29,11 +29,28 @@ export function defaultSessionConfig(): BrowserSessionConfig {
     persistentStorage: false,
     maxSteps: 25,
     maxNavigationSeconds: 30,
-    browserArgs: ["--disable-extensions", "--no-first-run", "--disable-sync"],
+    browserArgs: [
+      "--disable-extensions",
+      "--no-first-run",
+      "--disable-sync",
+      "--incognito", // nothing touches the real profile
+      "--mute-audio",
+      "--disable-background-networking", // no telemetry, no safe-browsing updates, no prefetch
+      "--disable-component-update",
+      "--disable-default-apps",
+      "--disable-features=AutofillServerCommunication", // form data (secrets) never leaves the browser
+    ],
   };
 }
 
-const FORBIDDEN_ARGS = ["--disable-web-security", "--no-sandbox", "--allow-file-access", "--remote-debugging-address"];
+const FORBIDDEN_ARGS = [
+  "--disable-web-security",
+  "--no-sandbox",
+  "--allow-file-access",
+  "--remote-debugging-address",
+  "--load-extension", // extensions can bypass every page-level control
+  "--user-data-dir", // persistent profiles violate the storage-ephemeral rule
+];
 
 /** Returns a list of violation codes; empty means the config is safe to launch. */
 export function isolationViolations(cfg: BrowserSessionConfig): string[] {

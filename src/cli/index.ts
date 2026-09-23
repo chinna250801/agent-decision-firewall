@@ -5,6 +5,7 @@ import { runEvaluation } from "../eval/runner.js";
 import { runBrowserEvaluation } from "../eval/browser-runner.js";
 import { createAdapter } from "./adapters.js";
 import { cmdCheck } from "./check.js";
+import { cmdBrowse } from "./browse.js";
 
 function argValue(flag: string): string | undefined {
   const i = process.argv.indexOf(flag);
@@ -113,6 +114,8 @@ async function main(): Promise<number> {
       return cmdCompare(opts);
     case "check":
       return cmdCheck(process.argv.slice(3));
+    case "browse":
+      return cmdBrowse(process.argv.slice(3));
     case "test":
       // One-command validation: typecheck+unit tests run via npm ci; here we run
       // the full deterministic gate: golden + adversarial + regression on mock.
@@ -122,7 +125,8 @@ async function main(): Promise<number> {
       }
       return 0;
     default:
-      console.log("usage: firewall eval|browse-eval|compare|check|test [--model jev|laya|mock] [--dataset golden.v1|browser-golden.v1] [--experiment id]");
+      console.log("usage: firewall eval|browse-eval|compare|check|browse|test [--model jev|laya|mock] [--dataset golden.v1|browser-golden.v1] [--experiment id]");
+      console.log("  firewall browse --url https://example.com \"find the pricing link\" — live gated session");
       console.log("  firewall check --requirement \"...\" --kind shell --summary \"run tests\" --target \"npm test\" [-v] [--exec]");
       return 2;
   }

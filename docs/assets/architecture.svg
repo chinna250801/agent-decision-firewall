@@ -1,0 +1,155 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 790" font-family="-apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1024"/>
+      <stop offset="0.55" stop-color="#191038"/>
+      <stop offset="1" stop-color="#2b1055"/>
+    </linearGradient>
+    <linearGradient id="titleGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#67e8f9"/>
+      <stop offset="0.5" stop-color="#a78bfa"/>
+      <stop offset="1" stop-color="#f0abfc"/>
+    </linearGradient>
+    <linearGradient id="flow" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#22d3ee"/>
+      <stop offset="1" stop-color="#c084fc"/>
+    </linearGradient>
+    <linearGradient id="firewallEdge" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#22d3ee" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#e879f9" stop-opacity="0.9"/>
+    </linearGradient>
+    <linearGradient id="green" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#34d399"/><stop offset="1" stop-color="#10b981"/>
+    </linearGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#fbbf24"/><stop offset="1" stop-color="#f59e0b"/>
+    </linearGradient>
+    <linearGradient id="red" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f87171"/><stop offset="1" stop-color="#ef4444"/>
+    </linearGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="10" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="12" flood-color="#000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="790" fill="url(#bg)"/>
+  <circle cx="140" cy="120" r="260" fill="#312e81" opacity="0.25"/>
+  <circle cx="1080" cy="680" r="300" fill="#7e22ce" opacity="0.18"/>
+
+  <text x="600" y="56" text-anchor="middle" font-size="34" font-weight="800" fill="url(#titleGrad)">The AI Decision Firewall</text>
+  <text x="600" y="86" text-anchor="middle" font-size="17" fill="#c7d2fe">Every action an AI assistant wants to take must pass one checkpoint — No approval, no execution.</text>
+
+  <!-- arrows -->
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#c084fc"/>
+    </marker>
+  </defs>
+  <path d="M 300 340 C 330 340 320 340 348 340" stroke="url(#flow)" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
+  <path d="M 852 340 C 882 340 872 340 900 340" stroke="url(#flow)" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- Card A: user + agent -->
+  <g filter="url(#soft)">
+    <rect x="40" y="150" width="260" height="380" rx="20" fill="#ffffff" fill-opacity="0.06" stroke="#ffffff" stroke-opacity="0.14"/>
+  </g>
+  <text x="170" y="196" text-anchor="middle" font-size="40">👤</text>
+  <text x="170" y="238" text-anchor="middle" font-size="19" font-weight="700" fill="#e0e7ff">You ask for something</text>
+  <text x="170" y="262" text-anchor="middle" font-size="14" fill="#a5b4fc">“Fix the checkout bug”</text>
+  <path d="M 170 288 L 170 316" stroke="#a78bfa" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="170" y="356" text-anchor="middle" font-size="40">🤖</text>
+  <text x="170" y="398" text-anchor="middle" font-size="19" font-weight="700" fill="#e0e7ff">Your AI proposes</text>
+  <text x="170" y="422" text-anchor="middle" font-size="14" fill="#a5b4fc">an action: edit a file,</text>
+  <text x="170" y="442" text-anchor="middle" font-size="14" fill="#a5b4fc">run a command, open a page</text>
+  <text x="170" y="486" text-anchor="middle" font-size="13" fill="#818cf8" font-style="italic">Its explanation is</text>
+  <text x="170" y="504" text-anchor="middle" font-size="13" fill="#818cf8" font-style="italic">never the permission.</text>
+
+  <!-- Card F: the firewall -->
+  <g filter="url(#glow)">
+    <rect x="350" y="120" width="500" height="440" rx="24" fill="#0f172a" fill-opacity="0.72" stroke="url(#firewallEdge)" stroke-width="2.5"/>
+  </g>
+  <text x="600" y="160" text-anchor="middle" font-size="21" font-weight="800" fill="#f0abfc">🧱 The Firewall asks 8 questions</text>
+
+  <!-- question pills -->
+  <g font-size="14.5" fill="#e0e7ff">
+    <rect x="376" y="184" width="216" height="44" rx="22" fill="#ffffff" fill-opacity="0.07" stroke="#ffffff" stroke-opacity="0.16"/>
+    <text x="388" y="211">🛂  Is it allowed at all?</text>
+    <rect x="608" y="184" width="216" height="44" rx="22" fill="#ffffff" fill-opacity="0.07" stroke="#ffffff" stroke-opacity="0.16"/>
+    <text x="620" y="211">🎯  Within the task?</text>
+
+    <rect x="376" y="240" width="216" height="44" rx="22" fill="#ffffff" fill-opacity="0.07" stroke="#ffffff" stroke-opacity="0.16"/>
+    <text x="388" y="267">💥  Destructive?</text>
+    <rect x="608" y="240" width="216" height="44" rx="22" fill="#ffffff" fill-opacity="0.07" stroke="#ffffff" stroke-opacity="0.16"/>
+    <text x="620" y="267">🔑  Touches secrets?</text>
+
+    <rect x="376" y="296" width="216" height="44" rx="22" fill="#ffffff" fill-opacity="0.07" stroke="#ffffff" stroke-opacity="0.16"/>
+    <text x="388" y="323">🕵️  Looks like an attack?</text>
+    <rect x="608" y="296" width="216" height="44" rx="22" fill="#ffffff" fill-opacity="0.07" stroke="#ffffff" stroke-opacity="0.16"/>
+    <text x="620" y="323">↩️  Undo-able?</text>
+
+    <rect x="376" y="352" width="216" height="44" rx="22" fill="#ffffff" fill-opacity="0.07" stroke="#ffffff" stroke-opacity="0.16"/>
+    <text x="388" y="379">📏  How risky, 0–4?</text>
+    <rect x="608" y="352" width="216" height="44" rx="22" fill="#ffffff" fill-opacity="0.07" stroke="#ffffff" stroke-opacity="0.16"/>
+    <text x="620" y="379">🙋  Needs a human?</text>
+  </g>
+
+  <!-- model answering visual -->
+  <rect x="376" y="420" width="448" height="92" rx="16" fill="#1e1b4b" fill-opacity="0.8" stroke="#a78bfa" stroke-opacity="0.35"/>
+  <text x="600" y="448" text-anchor="middle" font-size="15.5" font-weight="700" fill="#c4b5fd">A private, local AI model answers every question</text>
+  <g>
+    <rect x="404" y="464" width="150" height="12" rx="6" fill="#34d399" opacity="0.9"/><rect x="404" y="464" width="126" height="12" rx="6" fill="url(#green)"/>
+    <rect x="570" y="464" width="150" height="12" rx="6" fill="#34d399" opacity="0.25"/><rect x="570" y="464" width="46" height="12" rx="6" fill="url(#green)"/>
+    <rect x="404" y="486" width="150" height="12" rx="6" fill="#34d399" opacity="0.25"/><rect x="404" y="486" width="34" height="12" rx="6" fill="url(#red)"/>
+    <rect x="570" y="486" width="150" height="12" rx="6" fill="#34d399" opacity="0.25"/><rect x="570" y="486" width="96" height="12" rx="6" fill="url(#amber)"/>
+  </g>
+  <text x="600" y="532" text-anchor="middle" font-size="13.5" fill="#a5b4fc">with a confidence level — the rules, not the model, make the final call</text>
+
+  <!-- Card B: verdicts -->
+  <g filter="url(#soft)">
+    <rect x="900" y="150" width="260" height="380" rx="20" fill="#ffffff" fill-opacity="0.06" stroke="#ffffff" stroke-opacity="0.14"/>
+  </g>
+  <text x="1030" y="186" text-anchor="middle" font-size="16" font-weight="700" fill="#e0e7ff">Three possible answers</text>
+
+  <g filter="url(#soft)">
+    <rect x="922" y="206" width="216" height="86" rx="14" fill="#052e1b" stroke="url(#green)" stroke-width="2"/>
+    <text x="940" y="240" font-size="19" font-weight="800" fill="#6ee7b7">✅ ALLOW</text>
+    <text x="940" y="264" font-size="13.5" fill="#a7f3d0">Safe &amp; on-task —</text>
+    <text x="940" y="281" font-size="13.5" fill="#a7f3d0">the action runs</text>
+  </g>
+  <g filter="url(#soft)">
+    <rect x="922" y="306" width="216" height="86" rx="14" fill="#2d2005" stroke="url(#amber)" stroke-width="2"/>
+    <text x="940" y="340" font-size="19" font-weight="800" fill="#fcd34d">🟡 ASK YOU</text>
+    <text x="940" y="364" font-size="13.5" fill="#fde68a">Not sure — you get</text>
+    <text x="940" y="381" font-size="13.5" fill="#fde68a">the final say</text>
+  </g>
+  <g filter="url(#soft)">
+    <rect x="922" y="406" width="216" height="86" rx="14" fill="#2a0a0a" stroke="url(#red)" stroke-width="2"/>
+    <text x="940" y="440" font-size="19" font-weight="800" fill="#fca5a5">⛔ BLOCK</text>
+    <text x="940" y="464" font-size="13.5" fill="#fecaca">Dangerous, off-task,</text>
+    <text x="940" y="481" font-size="13.5" fill="#fecaca">or anything failed</text>
+  </g>
+
+  <!-- principles band -->
+  <g filter="url(#soft)" font-size="14.5" fill="#e0e7ff">
+    <rect x="60" y="600" width="340" height="92" rx="16" fill="#ffffff" fill-opacity="0.06" stroke="#ffffff" stroke-opacity="0.14"/>
+    <text x="230" y="638" text-anchor="middle" font-size="15.5" font-weight="700" fill="#f0abfc">Fail closed</text>
+    <text x="230" y="662" text-anchor="middle">If the model is down, unsure,</text>
+    <text x="230" y="680" text-anchor="middle">or an answer is missing → NO.</text>
+
+    <rect x="430" y="600" width="340" height="92" rx="16" fill="#ffffff" fill-opacity="0.06" stroke="#ffffff" stroke-opacity="0.14"/>
+    <text x="600" y="638" text-anchor="middle" font-size="15.5" font-weight="700" fill="#f0abfc">Everything is logged</text>
+    <text x="600" y="662" text-anchor="middle">Every decision recorded with its</text>
+    <text x="600" y="680" text-anchor="middle">reasons — secrets always removed.</text>
+
+    <rect x="800" y="600" width="340" height="92" rx="16" fill="#ffffff" fill-opacity="0.06" stroke="#ffffff" stroke-opacity="0.14"/>
+    <text x="970" y="638" text-anchor="middle" font-size="15.5" font-weight="700" fill="#f0abfc">Advisors, not actors</text>
+    <text x="970" y="662" text-anchor="middle">AI models only answer questions;</text>
+    <text x="970" y="680" text-anchor="middle">rules and humans do the deciding.</text>
+  </g>
+
+  <text x="600" y="742" text-anchor="middle" font-size="20" font-weight="800" fill="url(#titleGrad)">No approval → no execution.</text>
+  <text x="600" y="770" text-anchor="middle" font-size="12.5" fill="#818cf8">Works on your machine · nothing leaves it · swap-in decision models without changing the firewall</text>
+</svg>

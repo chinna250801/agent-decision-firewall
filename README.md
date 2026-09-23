@@ -15,6 +15,14 @@ with a built-in laboratory that proves it works.**
 
 ---
 
+## 🖼️ The whole idea in one picture
+
+*How it works for non-engineers: you ask → your AI proposes → the firewall asks 8 plain questions (allowed? on-task? destructive? touching secrets? attack-shaped? undoable? how risky? need a human?) → a private local model answers with confidence levels → deterministic rules issue one of three verdicts. Fail closed · fully logged · models advise, rules and humans decide.*
+
+<img src="docs/assets/architecture.svg" alt="AI Decision Firewall architecture: user asks, agent proposes, firewall asks 8 plain-language questions answered by a local model, rules decide ALLOW / ASK YOU / BLOCK; fail closed, fully logged, advisors not actors" width="960"/>
+
+---
+
 ## ⚡ The 60-second version
 
 AI agents edit files, run shell commands, push to git, call networks, drive browsers.
@@ -77,6 +85,17 @@ Two laws make it a boundary instead of a suggestion:
 | 7–9 | audit trail → dataset score → A/B | — | the lab side of the house |
 
 **Tally from the full 13-scenario run: 3 ALLOW · 7 ASK · 3 BLOCK · dangerous escapes 0.000.**
+
+<details>
+<summary><b>▶ Live web sessions — <code>firewall browse</code> on real Chrome (click to pause)</b></summary>
+
+<br>
+
+<img src="docs/assets/firewall-browser-demo.svg" alt="Firewall browser demo: live gated browsing with local Laya — benign goals, a typing goal, and a page-injected attack, every step firewall-approved" width="880"/>
+
+*What you're watching: `firewall browse` driving real, sandboxed Chrome against a local site — a benign navigation goal, a typing goal (split-brain: model picks the field, the quoted value is deterministic), and a **page-injected attack** the firewall refuses. Verdicts are honest: benign goals are currently over-blocked by zero-shot Laya (measured, documented, fix planned) — but nothing dangerous ever passes.*
+
+</details>
 
 ---
 
@@ -231,6 +250,16 @@ firewall browse-eval --model laya --dataset browser-adversarial.v1   # web attac
 
 Browser sessions are **isolation-validated before launch**: headless, origin allowlist (wildcards rejected), request filtering, no downloads, no persistent storage, hard step/time budgets. Page text is untrusted — there's a dedicated `injection_in_page` question.
 
+### `firewall browse` — a live, gated browser session
+
+Real Chrome, real pages, every step approved. The model picks one action per step (click/type/scroll/stop); the firewall approves it; stop gates end the run on BLOCK, ASK, stuck-ness, or budget.
+
+```bash
+firewall browse --url http://127.0.0.1:8899/ 'go to the pricing page and stop' -v
+```
+
+Sessions are sandboxed by construction: incognito profile, no background networking, no downloads, no persistent storage, origin-allowlisted requests (everything else aborted at the network layer), form values never leave the browser. Exit `0` completed · `2` needs a human · `1` blocked/failed.
+
 ### `firewall compare` — A/B, honestly
 
 ```bash
@@ -275,14 +304,14 @@ Every component is **versioned** (context, questions, policy, experiment) — an
 
 ## 📈 The numbers (measured on real hardware, honestly)
 
-Full data: [`docs/laya-eval-results.md`](docs/laya-eval-results.md) · [`docs/demo-run-findings.md`](docs/demo-run-findings.md)
+Full data: [`docs/laya-eval-results.md`](docs/laya-eval-results.md) · [`docs/demo-run-findings.md`](docs/demo-run-findings.md) · [`docs/browser-realtime-results.md`](docs/browser-realtime-results.md) (live browser sessions + a rejected question-v2 experiment, with data)
 
 | Dataset | Cases | Verdict accuracy | 🛡️ **Dangerous escape** | ⏳ **Safe friction** |
 |---|:---:|:---:|:---:|:---:|
-| golden | 12 | 33.3% | **0.000** | 0.600 |
-| adversarial | 7 | 28.6% | **0.000** | 1.000 |
-| regression | 3 | 66.7% | **0.000** | 1.000 |
-| browser-golden | 5 | 20.0% | **0.000** | 0.400 |
+| Golden | 12 | 33.3% | **0.000** | 0.600 |
+| Adversarial | 7 | 28.6% | **0.000** | 1.000 |
+| Regression | 3 | 66.7% | **0.000** | 1.000 |
+| Browser-golden | 5 | 20.0% | **0.000** | 0.400 |
 
 **How to read this like a security engineer:**
 
@@ -303,7 +332,7 @@ Latency: ~0.7 s/decision on Apple MPS (published: 33 ms on T4 GPU batched). Fine
 | **Private on-prem AI safety** | Laya is local — nothing leaves the network; audit trail included |
 | **Compliance evidence** | every decision logged with model+versions+reasons, secrets redacted |
 | **Model procurement** | run candidates through the same datasets, compare per-dimension before paying |
-| **Browser agent safety** | `browse-eval` + isolation-validated sessions + injection detection |
+| **Browser agent safety** | `firewall browse` live sessions + `browse-eval` + isolation-validated sandbox + injection detection |
 | **Continuous improvement loop** | bugs → regression cases → gates → promoted versions |
 
 **Effectiveness, in one paragraph:** the dangerous escape rate — the number that actually matters — is zero across every dataset, and every decision is audited, versioned, and reproducible. The current cost of that safety is friction (ASKs on ambiguous-safe actions), which is visible, measured, and shrinking via the evolution loop rather than hidden behind an aggregate score. Swap-in models via config mean the harness outlives any single vendor — Jev, Laya, and whatever comes next are interchangeable engines inside it.
@@ -367,5 +396,7 @@ No autonomous agent. No chatbot. No code generation. No automatic policy modific
 **Built as:** a rigorous decision boundary for AI agents, with interchangeable decision models — Laya first — and continuous empirical evaluation.
 
 *Every claim above is backed by a test, a dataset, or a recorded run.*
+
+Apache-2.0 · built with [Laya](https://pypi.org/project/laya/) (Apache-2.0) and [playwright-core](https://www.npmjs.com/package/playwright-core)
 
 </div>
