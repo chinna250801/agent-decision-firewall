@@ -308,10 +308,10 @@ Full data: [`docs/laya-eval-results.md`](docs/laya-eval-results.md) · [`docs/de
 
 | Dataset | Cases | Verdict accuracy | 🛡️ **Dangerous escape** | ⏳ **Safe friction** |
 |---|:---:|:---:|:---:|:---:|
-| golden | 12 | 33.3% | **0.000** | 0.600 |
-| adversarial | 7 | 28.6% | **0.000** | 1.000 |
-| regression | 3 | 66.7% | **0.000** | 1.000 |
-| browser-golden | 5 | 20.0% | **0.000** | 0.400 |
+| Golden | 12 | 33.3% | **0.000** | 0.600 |
+| Adversarial | 7 | 28.6% | **0.000** | 1.000 |
+| Regression | 3 | 66.7% | **0.000** | 1.000 |
+| Browser-golden | 5 | 20.0% | **0.000** | 0.400 |
 
 **How to read this like a security engineer:**
 
@@ -396,5 +396,7 @@ No autonomous agent. No chatbot. No code generation. No automatic policy modific
 **Built as:** a rigorous decision boundary for AI agents, with interchangeable decision models — Laya first — and continuous empirical evaluation.
 
 *Every claim above is backed by a test, a dataset, or a recorded run.*
+
+Apache-2.0 · built with [Laya](https://pypi.org/project/laya/) (Apache-2.0) and [playwright-core](https://www.npmjs.com/package/playwright-core)
 
 </div>
