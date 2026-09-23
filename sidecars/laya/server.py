@@ -34,17 +34,26 @@ def _load(name):
             _preloaded[name] = laya.load(target)
     return _preloaded[name]
 
+def _f(x, default=0.0):
+    try:
+        return float(x)
+    except (TypeError, ValueError):
+        return default
+
 def _answer(a):
     # Normalize the sidecar response to the same shape Jev returns.
-    if a["type"] == "noul":
-        return {"type": "noul", "noul": float(a["noul"])}
-    if a["type"] == "score":
-        return {"type": "score", "score": float(a["score"]),
+    t = a.get("type")
+    if t == "noul":
+        return {"type": "noul", "noul": _f(a.get("noul"))}
+    if t == "score":
+        return {"type": "score", "score": _f(a.get("score")),
                 "probabilities": a.get("probabilities", {}),
-                "confidence": a.get("confidence")}
-    return {"type": "choice", "choice": a["choice"],
-            "probabilities": a.get("probabilities", {}),
-            "confidence": a.get("confidence")}
+                "confidence": _f(a.get("confidence"), 1.0)}
+    if t == "choice":
+        return {"type": "choice", "choice": a.get("choice"),
+                "probabilities": a.get("probabilities", {}),
+                "confidence": _f(a.get("confidence"), 1.0)}
+    raise ValueError(f"unknown answer type: {t!r}")
 
 class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
@@ -71,5 +80,9 @@ class Handler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     port = int(os.environ.get("LAYA_SIDECAR_PORT", "8770"))
-    print(f"laya sidecar on http://127.0.0.1:{port}")
+    preload = os.environ.get("LAYA_PRELOAD", "english")
+    for name in preload.split(","):
+        if name.strip():
+            _load(name.strip())
+    print(f"laya sidecar on http://127.0.0.1:{port} (preloaded: {preload})")
     HTTPServer(("127.0.0.1", port), Handler).serve_forever()
