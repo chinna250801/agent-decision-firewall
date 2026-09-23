@@ -1,9 +1,15 @@
 import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { loadConfig } from "../config/config.js";
 import { loadQuestionRegistry } from "../questions/registry.js";
 import { DecisionFirewall, type FirewallDecision } from "../firewall/firewall.js";
+import { AuditLog } from "../audit/audit.js";
 import { createAdapter } from "./adapters.js";
 import type { DecisionState, ActionKind } from "../state/decision-state.js";
+
+/** Repo root of the installed harness — lets `check` run from any cwd (src/cli/../..). */
+const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "../..");
 
 export interface CheckArgs {
   model?: string;
@@ -79,11 +85,16 @@ export async function cmdCheck(argv: string[]): Promise<number> {
   const cfg = args.mockMode
     ? { ...cfg0, modelSettings: { ...cfg0.modelSettings, mock: { mode: args.mockMode } } }
     : cfg0;
-  const questions = loadQuestionRegistry(cfg.questionsPath).questions;
+  const questionsPath = cfg.questionsPath.startsWith("/")
+    ? cfg.questionsPath
+    : join(REPO_ROOT, cfg.questionsPath);
+  const questions = loadQuestionRegistry(questionsPath).questions;
   const fw = new DecisionFirewall({
     adapter: createAdapter(cfg),
     questions,
     experiment: { id: cfg.experiment.id, version: cfg.experiment.version },
+    // Every real decision leaves a tamper-evident trail; secrets are redacted.
+    audit: new AuditLog(".firewall/audit.jsonl"),
   });
 
   const state: DecisionState = {
