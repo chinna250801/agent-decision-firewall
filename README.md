@@ -60,6 +60,7 @@ schema mismatch, or exception ⇒ **BLOCK**, never "execute anyway".
 | Path | Purpose |
 | --- | --- |
 | `src/state/` | Canonical `DecisionState` (§7) — one state for every adapter/harness/replay |
+| `src/browser/` | Web agent: session isolation, DOM observation, step guard, bounded run loop (see below) |
 | `src/questions/` | Versioned question registry (§5) + zero-dep YAML subset parser |
 | `src/context/` | `context/v1` builder: state → deterministic model-agnostic text (§8) |
 | `src/adapters/` | Contract, Jev, Laya, Mock adapters; error-as-data, never throw (§4, §26) |
@@ -85,6 +86,33 @@ schema mismatch, or exception ⇒ **BLOCK**, never "execute anyway".
   expected decision follows the *actual operation*, never the agent's explanation.
 - **Regression v1** — permanent cases for every bug class (secret allowed, scope
   creep allowed, production deploy allowed).
+- **Browser golden v1** — page flows (search, checkout, form, scroll, stop) with
+  per-step expectations.
+- **Browser adversarial v1** — page-embedded prompt injection, offscreen danger
+  buttons, credential fields, cross-origin navigation, urgency modals.
+
+## Browser agent (Jev/Laya inside the web)
+
+Following the Cline `jev-browser` model (see `docs/research-jev-browser.md`):
+
+- **Isolation first** — every session must pass `isolationViolations`:
+  headless, origin allowlist (no wildcards), request filtering, no downloads,
+  no persistent storage, hard step/time budgets, forbidden browser args denied.
+- **Text observations, never screenshots** — indexed visible targets (`[t3]
+  button: "Search"`), below-fold marked, clipped to a context budget.
+- **One decision per step** — `step_action` choice + `goal_met` / `stuck` /
+  `injection_in_page` noul questions (registry v2).
+- **Code owns the loop; models decide; the firewall approves** — budgets,
+  recovery, stop gates live in `runBrowserGoal`; each step maps to the canonical
+  `DecisionState` and flows through the same policy engine as files and shell.
+- Split-brain ready: Jev/Laya pick the operation; an argument-generator LLM can
+  fill typed text without touching the decision path.
+
+```bash
+# evaluate browser datasets through the same gates
+npx tsx src/cli/index.ts browse-eval --model mock --mock-mode block_all --dataset browser-adversarial.v1
+npx tsx src/cli/index.ts browse-eval --model jev --dataset browser-golden.v1
+```
 
 ## Metrics (never one aggregate number)
 
@@ -124,8 +152,10 @@ Exit codes double as CI gates: `eval` exits 1 if any dangerous action escaped.
       evaluation runner, audit log, CLI, deterministic policy, fail-closed execution
 - [x] M2 — Laya adapter (identical schema; zero firewall code changed)
 - [x] Partial M3 — escape/friction gates; A/B compare
+- [x] M4 partial — browser executor: isolation, observation, step guard, run
+      loop, web datasets, `browse-eval` (real Playwright driver next)
 - [ ] M3 remainder — shadow mode, replay, human feedback loop, disagreement explorer
-- [ ] M4 — MCP interception, shell/git/network/database/browser executors
+- [ ] M4 remainder — Playwright driver, MCP interception, shell/git/network/database executors
 - [ ] M5 — continuous evaluation, candidate datasets, automated promotion
 
 ## Non-goals
