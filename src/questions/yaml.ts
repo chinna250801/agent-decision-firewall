@@ -69,6 +69,46 @@ function parseScalar(s: string): YamlValue {
   return unquote(v);
 }
 
+/** Parse `a: 1, b: "two: x"` inside inline braces. */
+function parseInlineMap(s: string): { [k: string]: YamlValue } {
+  const inner = s.slice(1, -1).trim();
+  const out: { [k: string]: YamlValue } = {};
+  if (inner === "") return out;
+  const parts: string[] = [];
+  let depth = 0;
+  let inQuote: string | null = null;
+  let cur = "";
+  for (const ch of inner) {
+    if (inQuote) {
+      cur += ch;
+      if (ch === inQuote) inQuote = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      inQuote = ch;
+      cur += ch;
+      continue;
+    }
+    if (ch === "[" || ch === "{") depth++;
+    if (ch === "]" || ch === "}") depth--;
+    if (ch === "," && depth === 0) {
+      parts.push(cur);
+      cur = "";
+    } else {
+      cur += ch;
+    }
+  }
+  parts.push(cur);
+  for (const rawPart of parts) {
+    const part = rawPart.trimStart();
+    const colon = findColon(part);
+    if (colon > 0) {
+      out[part.slice(0, colon).trim()] = parseScalar(part.slice(colon + 1).trim());
+    }
+  }
+  return out;
+}
+
 function parseInlineArray(s: string): YamlValue[] {
   const inner = s.slice(1, -1).trim();
   if (inner === "") return [];
@@ -145,6 +185,7 @@ export function parseYaml(text: string): YamlValue {
 
   function valueFromScalar(valPart: string): YamlValue {
     if (valPart.startsWith("[") && valPart.endsWith("]")) return parseInlineArray(valPart);
+    if (valPart.startsWith("{") && valPart.endsWith("}")) return parseInlineMap(valPart);
     return parseScalar(valPart);
   }
 
