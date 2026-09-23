@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { parseYaml, type YamlValue } from "./yaml.js";
-import { FIREWALL_QUESTION_IDS, type FirewallQuestion, type QuestionRegistry } from "./types.js";
+import { FIREWALL_QUESTION_IDS, ALL_QUESTION_IDS, type FirewallQuestion, type QuestionRegistry } from "./types.js";
 
 function isObj(v: YamlValue): v is { [k: string]: YamlValue } {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -26,7 +26,7 @@ function strArr(v: YamlValue | undefined, field: string): string[] {
 function toQuestion(raw: YamlValue): FirewallQuestion {
   if (!isObj(raw)) throw new Error("each question must be a map");
   const id = str(raw["id"], "id");
-  if (!(FIREWALL_QUESTION_IDS as readonly string[]).includes(id)) {
+  if (!(ALL_QUESTION_IDS as readonly string[]).includes(id)) {
     throw new Error(`unknown question id "${id}"`);
   }
   const version = num(raw["version"], "version");
