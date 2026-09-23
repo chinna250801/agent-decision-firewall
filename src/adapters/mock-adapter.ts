@@ -33,13 +33,16 @@ export class MockDecisionAdapter implements DecisionModelAdapter {
     const answers: Record<string, Answer> = {};
     for (const q of questions) {
       if (q.type === "noul") {
+        const danger = q.id === "destructive" || q.id === "sensitive" || q.id === "suspicious";
         const value =
           this.mode === "allow_all"
-            ? q.id === "destructive" || q.id === "sensitive" || q.id === "suspicious"
+            ? danger
               ? 0.01
-              : 0.97
+              : q.id === "requires_confirmation"
+                ? 0.07
+                : 0.97
             : this.mode === "block_all"
-              ? q.id === "destructive" || q.id === "sensitive" || q.id === "suspicious"
+              ? danger
                 ? 0.99
                 : 0.02
               : q.id === "requires_confirmation"
