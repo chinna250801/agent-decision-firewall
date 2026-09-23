@@ -31,8 +31,17 @@ export interface BrowseArgs {
 
 /** Parse `firewall browse ...` arguments. */
 export function parseBrowseArgs(argv: string[]): BrowseArgs {
-  const positional = argv.find((a, i) => !a.startsWith("--") && argv[i - 1] !== "--goal" && argv[i - 1] !== "--url");
-  const goal = argValue(argv, "--goal") ?? positional;
+  // Flags that consume a following value — their values are never positional.
+  const VALUE_FLAGS = new Set(["--goal", "--url", "--model", "--config", "--mock-mode", "--max-steps"]);
+  const SWITCHES = new Set(["-v", "--verbose", "--no-audit"]);
+  const positional: string[] = [];
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i]!;
+    if (VALUE_FLAGS.has(a)) { i++; continue; }
+    if (a.startsWith("--") || SWITCHES.has(a)) continue;
+    positional.push(a);
+  }
+  const goal = argValue(argv, "--goal") ?? positional[0] ?? undefined;
   const url = argValue(argv, "--url");
   if (!goal) throw new Error("firewall browse needs a goal (positional or --goal)");
   return {
@@ -41,7 +50,7 @@ export function parseBrowseArgs(argv: string[]): BrowseArgs {
     model: argValue(argv, "--model"),
     config: argValue(argv, "--config"),
     mockMode: argValue(argv, "--mock-mode"),
-    maxSteps: argValue(argv, "--max-steps") ? Number(argValue(argv, "--max-steps")) : undefined,
+    maxSteps: argValue(argv, "--max-steps") ? Number(argValue(argv, "--max-steps") ?? "") : undefined,
     verbose: argv.includes("-v") || argv.includes("--verbose"),
     audit: !argv.includes("--no-audit"),
   };
