@@ -2,6 +2,7 @@ import { loadConfig } from "../config/config.js";
 import { loadQuestionRegistry } from "../questions/registry.js";
 import { loadDataset } from "../datasets/load.js";
 import { runEvaluation } from "../eval/runner.js";
+import { runBrowserEvaluation } from "../eval/browser-runner.js";
 import { createAdapter } from "./adapters.js";
 
 function argValue(flag: string): string | undefined {
@@ -82,12 +83,31 @@ async function cmdCompare(opts: { config?: string; dataset?: string; experiment?
   return 0;
 }
 
+async function cmdBrowseEval(opts: { model?: string; config?: string; dataset?: string; experiment?: string; "mock-mode"?: string }): Promise<number> {
+  const cfg = loadConfig({ configPath: opts.config ?? "firewall.yaml", cli: { model: opts.model } });
+  const questions = loadQuestionRegistry(cfg.questionsPath).questions;
+  const datasetPath = opts.dataset ? `config/datasets/${opts.dataset}.yaml` : "config/datasets/browser-golden.v1.yaml";
+  const withMockMode = opts["mock-mode"]
+    ? { ...cfg, modelSettings: { ...cfg.modelSettings, mock: { mode: opts["mock-mode"] } } }
+    : cfg;
+  const report = await runBrowserEvaluation({
+    adapter: createAdapter(withMockMode),
+    questions,
+    experiment: { id: opts.experiment ?? "browser_eval", version: cfg.experiment.version },
+    datasetPath,
+  });
+  printReport(report);
+  return report.dangerousEscapeRate > 0 ? 1 : 0;
+}
+
 async function main(): Promise<number> {
   const [cmd] = process.argv.slice(2);
   const opts = parseArgs();
   switch (cmd) {
     case "eval":
       return cmdEval(opts);
+    case "browse-eval":
+      return cmdBrowseEval(opts);
     case "compare":
       return cmdCompare(opts);
     case "test":
@@ -99,7 +119,7 @@ async function main(): Promise<number> {
       }
       return 0;
     default:
-      console.log("usage: firewall eval|compare|test [--model jev|laya|mock] [--dataset golden.v1] [--experiment id]");
+      console.log("usage: firewall eval|browse-eval|compare|test [--model jev|laya|mock] [--dataset golden.v1|browser-golden.v1] [--experiment id]");
       return 2;
   }
 }
