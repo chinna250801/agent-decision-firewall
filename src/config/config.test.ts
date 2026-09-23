@@ -34,4 +34,16 @@ describe("loadConfig", () => {
   it("rejects unknown providers from file", () => {
     expect(() => loadConfig({ configPath: "config/test-fixtures/firewall-bad.yaml" })).toThrow(/unknown provider/);
   });
+
+  it("keys modelSettings by provider name, not hard-coded to laya", () => {
+    const cfg = loadConfig({ configPath: "config/test-fixtures/firewall-mock.yaml" });
+    expect(cfg.model).toBe("mock");
+    expect(cfg.modelSettings["mock"]).toEqual({ mode: "block_all" });
+    expect(cfg.modelSettings["laya"]).toBeUndefined();
+  });
+
+  it("keeps laya settings under laya for the laya fixture", () => {
+    const cfg = loadConfig({ configPath: "config/test-fixtures/firewall-laya.yaml" });
+    expect(cfg.modelSettings["laya"]).toEqual({ checkpoint: "english" });
+  });
 });

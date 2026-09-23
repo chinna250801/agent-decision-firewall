@@ -40,7 +40,9 @@ function fromFile(path: string): Partial<FirewallConfig> {
     out.model = provider as ProviderName;
   }
   if (isObj(decisionModel["settings"])) {
-    out.modelSettings = { laya: decisionModel["settings"] as Record<string, unknown> };
+    // Settings are keyed by provider name (settings.laya.*, settings.mock.*);
+    // the firewall never reads them — only the adapter factory does.
+    out.modelSettings = decisionModel["settings"] as unknown as FirewallConfig["modelSettings"];
   }
   if (typeof experiment["id"] === "string") {
     out.experiment = { id: experiment["id"], version: typeof experiment["version"] === "number" ? experiment["version"] : 1 };
