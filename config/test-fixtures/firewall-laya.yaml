@@ -1,0 +1,12 @@
+# Fixture: model selection via config file
+decision_model:
+  provider: laya
+  settings:
+    laya:
+      checkpoint: english
+
+experiment:
+  id: firewall_v1_scope_check
+  version: 1
+
+questions: config/questions.v1.yaml

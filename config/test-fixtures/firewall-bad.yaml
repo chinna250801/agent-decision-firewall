@@ -1,0 +1,3 @@
+# Fixture: invalid provider must be rejected
+decision_model:
+  provider: gpt-5
