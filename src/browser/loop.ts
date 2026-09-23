@@ -15,9 +15,11 @@ export interface StepTraceEntry {
 }
 
 export interface RunResult {
-  status: "completed" | "blocked" | "budget_exhausted" | "stuck" | "ask_user";
+  status: "completed" | "blocked" | "budget_exhausted" | "stuck" | "ask_user" | "executor_error";
   steps: StepTraceEntry[];
   finalUrl: string | null;
+  /** Set when the executor/driver itself failed; the run must fail closed. */
+  error?: string;
 }
 
 /** Observation provider: implemented by a real Playwright driver (M4). */
@@ -43,7 +45,13 @@ export async function runBrowserGoal(input: {
 }): Promise<RunResult> {
   const maxSteps = input.maxSteps ?? input.session.maxSteps;
   const steps: StepTraceEntry[] = [];
-  let observation = await input.driver.start();
+  let observation: PageObservation;
+  try {
+    observation = await input.driver.start();
+  } catch (e) {
+    // Cannot even observe the page: fail closed, execute nothing.
+    return { status: "executor_error", steps, finalUrl: null, error: String(e).slice(0, 200) };
+  }
 
   for (let stepNum = 1; stepNum <= maxSteps; stepNum++) {
     const history = steps;
@@ -77,7 +85,12 @@ export async function runBrowserGoal(input: {
       return { status: "blocked", steps, finalUrl: observation.url };
     }
 
-    observation = await input.driver.apply(operation);
+    try {
+      observation = await input.driver.apply(operation);
+    } catch (e) {
+      // The approved action half-executed and the driver broke: fail closed.
+      return { status: "executor_error", steps, finalUrl: observation.url, error: String(e).slice(0, 200) };
+    }
   }
   return { status: "budget_exhausted", steps, finalUrl: observation.url };
 }
