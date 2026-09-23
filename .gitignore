@@ -14,3 +14,8 @@ demo/
 *.gif
 tape/
 audit/
+
+# local recording pipeline (never shipped)
+demo/record-*.sh
+scripts/*record*.sh
+scripts/demo-scenarios.sh
