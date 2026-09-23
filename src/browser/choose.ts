@@ -28,8 +28,15 @@ export async function chooseNextStep(input: ChooseInput): Promise<{ operation: B
 
   const options: string[] = [];
   const ops = new Map<string, BrowserOperation>();
-  for (const node of observation.nodes) {
-    if (!node.visible) continue;
+  // Respect the adapter's choice head size; above-fold targets get priority.
+  const cap = Math.max(4, input.adapter.capabilities().maxChoiceOptions - 3);
+  const ranked = [...observation.nodes].filter((n) => n.visible).sort((a, b) => Number(b.aboveFold) - Number(a.aboveFold));
+  let omitted = 0;
+  for (const node of ranked) {
+    if (options.length >= cap) {
+      omitted++;
+      continue;
+    }
     options.push(`click:${node.id}`);
     ops.set(`click:${node.id}`, { op: "click", targetId: node.id });
     if (wantsType && quoted && (node.role === "input" || node.role === "textarea")) {
@@ -37,6 +44,7 @@ export async function chooseNextStep(input: ChooseInput): Promise<{ operation: B
       ops.set(`type:${node.id}`, { op: "type", targetId: node.id, text: quoted });
     }
   }
+  if (omitted > 0) options.push(`+${omitted}_targets_omitted`);
   options.push("scroll", "wait", "stop");
   ops.set("scroll", { op: "scroll" });
   ops.set("wait", { op: "wait" });
